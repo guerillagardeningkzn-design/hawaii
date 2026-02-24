@@ -2,135 +2,143 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zoomable Map Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hawaii Zoomable Map</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            background-color: #0a3d62; /* Ocean blue – fills dead space around portrait map */
+            font-family: Arial, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f0f0f0;
-            font-family: Arial, sans-serif;
         }
         #map-container {
             position: relative;
-            width: 600px; /* Matches assumed image width */
-            height: 800px; /* Matches assumed image height */
-            border: 1px solid #ccc;
+            width: 100vw;
+            height: 100vh;
+            max-width: 540px;   /* Typical phone portrait width – adjust if your images are wider */
+            max-height: 960px;  /* Enforces portrait feel */
+            background-color: #0a3d62; /* Matches body – no white gaps */
+            border: 12px solid #0a3d62; /* Thick border to extend color into dead space */
+            border-radius: 16px; /* Optional: soft corners like a phone screen */
             overflow: hidden;
+            box-shadow: 0 0 40px rgba(0,0,0,0.6); /* Optional depth */
         }
         svg {
             width: 100%;
             height: 100%;
+            display: block;
+        }
+        image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Keeps aspect ratio, centers map */
         }
         polygon {
             fill: transparent;
-            stroke: red;
-            stroke-width: 2;
+            stroke: rgba(255, 60, 60, 0.7); /* Visible red outline, semi-transparent */
+            stroke-width: 3;
             cursor: pointer;
+            transition: fill 0.2s;
         }
         polygon:hover {
-            fill: rgba(255, 0, 0, 0.1); /* Semi-transparent hover effect */
+            fill: rgba(255, 60, 60, 0.15);
         }
         #back-button {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            padding: 10px 20px;
-            background-color: #007bff;
+            top: 16px;
+            left: 16px;
+            z-index: 10;
+            padding: 12px 24px;
+            background-color: rgba(0, 123, 255, 0.85);
             color: white;
             border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
             cursor: pointer;
-            display: none; /* Hidden on level 1 */
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            display: none;
         }
         #back-button:hover {
-            background-color: #0056b3;
+            background-color: rgba(0, 86, 179, 0.95);
         }
     </style>
 </head>
 <body>
     <div id="map-container">
-        <button id="back-button" onclick="goBack()">Back</button>
-        <svg id="map-svg"></svg>
+        <button id="back-button">Back</button>
+        <svg id="map-svg" viewBox="0 0 600 800" preserveAspectRatio="xMidYMid meet"></svg>
     </div>
 
     <script>
-        // Array of maps for easy expansion. Each entry has:
-        // - url: Image path
-        // - regions: Array of { points: 'x1,y1 x2,y2 ...', nextLevel: index (0-based) }
+        // Maps array – add more levels easily later
         const maps = [
             {
-                url: 'images/island_map.jpg', // Level 1: Large island
+                url: 'images/island_map.jpg',
                 regions: [
-                    {
-                        points: '100,500 500,500 500,750 300,800 100,700', // Rough poly for southern coast/desert (adjust as needed)
-                        nextLevel: 1 // Zooms to Level 2
-                    }
-                    // Add more regions here, e.g., { points: '...', nextLevel: 3 } for another sub-map
+                    // Example poly for southern area → Gulf Coast level
+                    { points: '80,520 520,520 520,760 320,800 80,720', nextLevel: 1 }
                 ]
             },
             {
-                url: 'images/gulf_coast.jpg', // Level 2: Gulf Coast
+                url: 'images/gulf_coast.jpg',
                 regions: [
-                    {
-                        points: '200,400 400,400 400,600 300,650 200,600', // Rough poly around Port Haven village (adjust as needed)
-                        nextLevel: 2 // Zooms to Level 3
-                    }
-                    // Add more regions, e.g., for other areas like Emerald Highlands
+                    // Example poly around Port Haven
+                    { points: '180,420 420,420 420,620 320,670 180,620', nextLevel: 2 }
                 ]
             },
             {
-                url: 'images/port_haven.jpg', // Level 3: Port Haven
-                regions: [] // No further zooms; add if you create sub-maps
+                url: 'images/port_haven.jpg',
+                regions: [] // Terminal level – add regions if you make deeper zooms
             }
-            // Add more levels here, e.g., { url: 'images/new_map.png', regions: [...] }
         ];
 
-        let currentLevel = 0; // Start at level 0 (Level 1)
+        let currentLevel = 0;
         const svg = document.getElementById('map-svg');
         const backButton = document.getElementById('back-button');
 
         function renderMap(level) {
             currentLevel = level;
-            const map = maps[level];
-            svg.innerHTML = ''; // Clear previous
+            const mapData = maps[level];
+            svg.innerHTML = '';
 
-            // Add background image
-            const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-            image.setAttributeNS('http://www.w3.org/1999/xlink', 'href', map.url);
-            image.setAttribute('width', '600');
-            image.setAttribute('height', '800');
-            image.setAttribute('x', '0');
-            image.setAttribute('y', '0');
-            svg.appendChild(image);
+            // Background image
+            const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+            img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', mapData.url);
+            img.setAttribute('x', '0');
+            img.setAttribute('y', '0');
+            img.setAttribute('width', '600');
+            img.setAttribute('height', '800');
+            svg.appendChild(img);
 
-            // Add clickable polygons
-            map.regions.forEach(region => {
-                const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-                polygon.setAttribute('points', region.points);
-                polygon.addEventListener('click', () => zoomTo(region.nextLevel));
-                svg.appendChild(polygon);
+            // Clickable regions
+            mapData.regions.forEach(r => {
+                const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                poly.setAttribute('points', r.points);
+                poly.addEventListener('click', () => {
+                    if (r.nextLevel < maps.length) renderMap(r.nextLevel);
+                });
+                svg.appendChild(poly);
             });
 
-            // Show/hide back button
-            backButton.style.display = (level > 0) ? 'block' : 'none';
-        }
-
-        function zoomTo(level) {
-            if (level < maps.length) {
-                renderMap(level);
-            }
+            backButton.style.display = level > 0 ? 'block' : 'none';
         }
 
         function goBack() {
-            if (currentLevel > 0) {
-                renderMap(currentLevel - 1);
-            }
+            if (currentLevel > 0) renderMap(currentLevel - 1);
         }
 
-        // Initial render
+        backButton.addEventListener('click', goBack);
+
+        // Start with level 0
         renderMap(0);
     </script>
 </body>
