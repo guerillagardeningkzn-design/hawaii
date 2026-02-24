@@ -79,12 +79,12 @@
     </div>
 
     <script>
-    let maps = [];  // Populated dynamically from Google Sheets via Apps Script
+    let maps = [];
     let currentLevel = 0;
     const svg = document.getElementById('map-svg');
     const backButton = document.getElementById('back-button');
 
-    // ←←← REPLACE THIS WITH YOUR ACTUAL APPS SCRIPT WEB APP URL ←←←
+    // Replace this line with your real Apps Script URL
     const apiUrl = 'https://script.google.com/macros/s/AKfycbygjXQ023r358utfU_3UhVQDDN3vOWnahjY_Gs6mpubRbs5l-oZECpy7pt0lUPWpvLK/exec';
 
     async function loadMapData() {
@@ -92,7 +92,7 @@
             const response = await fetch(apiUrl, {
                 method: 'GET',
                 mode: 'cors',
-                cache: 'no-cache',  // Ensures you get fresh data after Sheet edits
+                cache: 'no-cache',
                 redirect: 'follow'
             });
 
@@ -106,17 +106,16 @@
                 throw new Error('Invalid map data format');
             }
 
-            renderMap(0);  // Start with level 0 after successful load
+            renderMap(0);
         } catch (error) {
             console.error('Failed to load map data from Google Sheets:', error);
 
-            // Fallback: hardcoded original data (safe backup)
+            // Fallback hardcoded data
             maps = [
                 {
                     url: 'images/island_map.jpg',
                     regions: [
                         { points: '80,520 520,520 520,760 320,800 80,720', nextLevel: 1 }
-                        // Add more regions here if needed for fallback
                     ]
                 },
                 {
@@ -132,7 +131,7 @@
             ];
 
             renderMap(0);
-            alert('Using fallback map data (check console for details)');
+            alert('Using fallback map data - check console');
         }
     }
 
@@ -147,7 +146,6 @@
 
         svg.innerHTML = '';
 
-        // Background image
         const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
         img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', mapData.url);
         img.setAttribute('x', '0');
@@ -156,7 +154,6 @@
         img.setAttribute('height', '800');
         svg.appendChild(img);
 
-        // Clickable polygon regions
         (mapData.regions || []).forEach(region => {
             const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
             poly.setAttribute('points', region.points);
@@ -168,7 +165,6 @@
             svg.appendChild(poly);
         });
 
-        // Show/hide back button
         backButton.style.display = (level > 0) ? 'block' : 'none';
     }
 
@@ -178,10 +174,8 @@
         }
     }
 
-    // Wire up the back button
     backButton.addEventListener('click', goBack);
 
-    // Load data when page is ready
     window.addEventListener('DOMContentLoaded', loadMapData);
 </script>
 </body>
