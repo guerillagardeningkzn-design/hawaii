@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zoomable Map Game</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        #map-container {
+            position: relative;
+            width: 600px; /* Matches assumed image width */
+            height: 800px; /* Matches assumed image height */
+            border: 1px solid #ccc;
+            overflow: hidden;
+        }
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+        polygon {
+            fill: transparent;
+            stroke: red;
+            stroke-width: 2;
+            cursor: pointer;
+        }
+        polygon:hover {
+            fill: rgba(255, 0, 0, 0.1); /* Semi-transparent hover effect */
+        }
+        #back-button {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: none; /* Hidden on level 1 */
+        }
+        #back-button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div id="map-container">
+        <button id="back-button" onclick="goBack()">Back</button>
+        <svg id="map-svg"></svg>
+    </div>
+
+    <script>
+        // Array of maps for easy expansion. Each entry has:
+        // - url: Image path
+        // - regions: Array of { points: 'x1,y1 x2,y2 ...', nextLevel: index (0-based) }
+        const maps = [
+            {
+                url: 'images/island_map.png', // Level 1: Large island
+                regions: [
+                    {
+                        points: '100,500 500,500 500,750 300,800 100,700', // Rough poly for southern coast/desert (adjust as needed)
+                        nextLevel: 1 // Zooms to Level 2
+                    }
+                    // Add more regions here, e.g., { points: '...', nextLevel: 3 } for another sub-map
+                ]
+            },
+            {
+                url: 'images/gulf_coast.png', // Level 2: Gulf Coast
+                regions: [
+                    {
+                        points: '200,400 400,400 400,600 300,650 200,600', // Rough poly around Port Haven village (adjust as needed)
+                        nextLevel: 2 // Zooms to Level 3
+                    }
+                    // Add more regions, e.g., for other areas like Emerald Highlands
+                ]
+            },
+            {
+                url: 'images/port_haven.png', // Level 3: Port Haven
+                regions: [] // No further zooms; add if you create sub-maps
+            }
+            // Add more levels here, e.g., { url: 'images/new_map.png', regions: [...] }
+        ];
+
+        let currentLevel = 0; // Start at level 0 (Level 1)
+        const svg = document.getElementById('map-svg');
+        const backButton = document.getElementById('back-button');
+
+        function renderMap(level) {
+            currentLevel = level;
+            const map = maps[level];
+            svg.innerHTML = ''; // Clear previous
+
+            // Add background image
+            const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+            image.setAttributeNS('http://www.w3.org/1999/xlink', 'href', map.url);
+            image.setAttribute('width', '600');
+            image.setAttribute('height', '800');
+            image.setAttribute('x', '0');
+            image.setAttribute('y', '0');
+            svg.appendChild(image);
+
+            // Add clickable polygons
+            map.regions.forEach(region => {
+                const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                polygon.setAttribute('points', region.points);
+                polygon.addEventListener('click', () => zoomTo(region.nextLevel));
+                svg.appendChild(polygon);
+            });
+
+            // Show/hide back button
+            backButton.style.display = (level > 0) ? 'block' : 'none';
+        }
+
+        function zoomTo(level) {
+            if (level < maps.length) {
+                renderMap(level);
+            }
+        }
+
+        function goBack() {
+            if (currentLevel > 0) {
+                renderMap(currentLevel - 1);
+            }
+        }
+
+        // Initial render
+        renderMap(0);
+    </script>
+</body>
+</html>
