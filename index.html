@@ -74,155 +74,159 @@
     </div>
 
     <script>
-        let maps = [];
-        let currentLevel = 0;
-        let history = [];  // Navigation stack for proper back behavior
+    let maps = [];
+    let currentLevel = 0;
+    let history = [];           // Stack of previous levels for proper back navigation
+    let isGoingBack = false;    // Flag to distinguish forward vs backward moves
 
-        const svg = document.getElementById('map-svg');
-        const backButton = document.getElementById('back-button');
+    const svg = document.getElementById('map-svg');
+    const backButton = document.getElementById('back-button');
 
-        // REPLACE THIS WITH YOUR ACTUAL APPS SCRIPT WEB APP URL
-        const apiUrl = 'https://script.google.com/macros/s/AKfycbygjXQ023r358utfU_3UhVQDDN3vOWnahjY_Gs6mpubRbs5l-oZECpy7pt0lUPWpvLK/exec';
+    // REPLACE THIS WITH YOUR ACTUAL APPS SCRIPT WEB APP URL
+    const apiUrl = 'https://script.google.com/macros/s/AKfycbygjXQ023r358utfU_3UhVQDDN3vOWnahjY_Gs6mpubRbs5l-oZECpy7pt0lUPWpvLK/exec';
 
-        async function loadMapData() {
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'GET',
-                    mode: 'cors',
-                    cache: 'no-cache',
-                    redirect: 'follow'
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-
-                maps = await response.json();
-
-                if (!Array.isArray(maps) || maps.length === 0) {
-                    throw new Error('Invalid map data format');
-                }
-
-                renderMap(0);
-            } catch (error) {
-                console.error('Failed to load map data from Google Sheets:', error);
-
-                // Fallback hardcoded data
-                maps = [
-                    {
-                        url: 'images/island_map.jpg',
-                        regions: [
-                            { points: '80,520 520,520 520,760 320,800 80,720', nextLevel: 1 }
-                        ],
-                        objects: []
-                    },
-                    {
-                        url: 'images/gulf_coast.jpg',
-                        regions: [
-                            { points: '180,420 420,420 420,620 320,670 180,620', nextLevel: 2 },
-                            { points: '300,100 500,100 500,300 300,300', nextLevel: 3 }
-                        ],
-                        objects: [
-                            { type: 'marker', points: '250,450', properties: { name: 'Inn', desc: 'Rest here', action: 'heal' } },
-                            { type: 'collectible', points: '380,620', properties: { name: 'Pearl', value: 100 } }
-                        ]
-                    },
-                    {
-                        url: 'images/port_haven.jpg',
-                        regions: [],
-                        objects: []
-                    },
-                    {
-                        url: 'images/volcano_peak.jpg',
-                        regions: [],
-                        objects: [
-                            { type: 'marker', points: '400,300', properties: { name: 'Volcano Spirit', dialog: 'Beware!' } }
-                        ]
-                    }
-                ];
-
-                renderMap(0);
-                alert('Using fallback map data – check console for details');
-            }
-        }
-
-        function renderMap(level) {
-            // Push current level to history only when moving forward
-            if (level !== currentLevel) {
-                history.push(currentLevel);
-            }
-
-            // Reset history when returning to root
-            if (level === 0) {
-                history = [];
-            }
-
-            currentLevel = level;
-            const mapData = maps[level];
-
-            if (!mapData) {
-                console.error('No map data for level', level);
-                return;
-            }
-
-            svg.innerHTML = '';
-
-            // Background image
-            const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-            img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', mapData.url);
-            img.setAttribute('x', '0');
-            img.setAttribute('y', '0');
-            img.setAttribute('width', '600');
-            img.setAttribute('height', '800');
-            svg.appendChild(img);
-
-            // Clickable zoom regions (polygons)
-            (mapData.regions || []).forEach(region => {
-                const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-                poly.setAttribute('points', region.points);
-                poly.addEventListener('click', () => {
-                    if (typeof region.nextLevel === 'number' && region.nextLevel < maps.length) {
-                        renderMap(region.nextLevel);
-                    }
-                });
-                svg.appendChild(poly);
+    async function loadMapData() {
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'GET',
+                mode: 'cors',
+                cache: 'no-cache',
+                redirect: 'follow'
             });
 
-            // Interactive objects / markers
-            (mapData.objects || []).forEach(obj => {
-                if (obj.type === 'marker') {
-                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                    const [cx, cy] = obj.points.split(',').map(Number);
-                    circle.setAttribute('cx', cx);
-                    circle.setAttribute('cy', cy);
-                    circle.setAttribute('r', '12');
-                    circle.setAttribute('fill', 'gold');
-                    circle.setAttribute('stroke', 'black');
-                    circle.setAttribute('stroke-width', '2');
-                    circle.addEventListener('click', () => {
-                        alert(`Clicked: ${obj.properties.name}\n${obj.properties.desc || obj.properties.dialog || ''}`);
-                    });
-                    svg.appendChild(circle);
-                }
-                // Future image-based types go here, e.g.:
-                // else if (obj.type === 'icon') { ... <image> element ... }
-            });
-
-            // Show back button only when there's history
-            backButton.style.display = (history.length > 0) ? 'block' : 'none';
-        }
-
-        function goBack() {
-            if (history.length > 0) {
-                const previousLevel = history.pop();
-                renderMap(previousLevel);
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
             }
+
+            maps = await response.json();
+
+            if (!Array.isArray(maps) || maps.length === 0) {
+                throw new Error('Invalid map data format');
+            }
+
+            renderMap(0);
+        } catch (error) {
+            console.error('Failed to load map data from Google Sheets:', error);
+
+            // Fallback hardcoded data (includes example objects & deeper levels)
+            maps = [
+                {
+                    url: 'images/island_map.jpg',
+                    regions: [
+                        { points: '80,520 520,520 520,760 320,800 80,720', nextLevel: 1 }
+                    ],
+                    objects: []
+                },
+                {
+                    url: 'images/gulf_coast.jpg',
+                    regions: [
+                        { points: '180,420 420,420 420,620 320,670 180,620', nextLevel: 2 },
+                        { points: '300,100 500,100 500,300 300,300', nextLevel: 3 }
+                    ],
+                    objects: [
+                        { type: 'marker', points: '250,450', properties: { name: 'Inn', desc: 'Rest here', action: 'heal' } },
+                        { type: 'collectible', points: '380,620', properties: { name: 'Pearl', value: 100 } }
+                    ]
+                },
+                {
+                    url: 'images/port_haven.jpg',
+                    regions: [],
+                    objects: []
+                },
+                {
+                    url: 'images/volcano_peak.jpg',
+                    regions: [],
+                    objects: [
+                        { type: 'marker', points: '400,300', properties: { name: 'Volcano Spirit', dialog: 'Beware!' } }
+                    ]
+                }
+            ];
+
+            renderMap(0);
+            alert('Using fallback map data – check console for details');
+        }
+    }
+
+    function renderMap(level) {
+        // Only push to history when moving forward (not when going back)
+        if (!isGoingBack && level !== currentLevel) {
+            history.push(currentLevel);
         }
 
-        backButton.addEventListener('click', goBack);
+        // Reset the flag after it's been used
+        isGoingBack = false;
 
-        // Load data when page is ready
-        window.addEventListener('DOMContentLoaded', loadMapData);
-    </script>
+        // Clear history when we reach the top level
+        if (level === 0) {
+            history = [];
+        }
+
+        currentLevel = level;
+        const mapData = maps[level];
+
+        if (!mapData) {
+            console.error('No map data for level', level);
+            return;
+        }
+
+        svg.innerHTML = '';
+
+        // Background image
+        const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+        img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', mapData.url);
+        img.setAttribute('x', '0');
+        img.setAttribute('y', '0');
+        img.setAttribute('width', '600');
+        img.setAttribute('height', '800');
+        svg.appendChild(img);
+
+        // Clickable zoom regions (polygons)
+        (mapData.regions || []).forEach(region => {
+            const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            poly.setAttribute('points', region.points);
+            poly.addEventListener('click', () => {
+                if (typeof region.nextLevel === 'number' && region.nextLevel < maps.length) {
+                    renderMap(region.nextLevel);
+                }
+            });
+            svg.appendChild(poly);
+        });
+
+        // Interactive objects / markers
+        (mapData.objects || []).forEach(obj => {
+            if (obj.type === 'marker') {
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                const [cx, cy] = obj.points.split(',').map(Number);
+                circle.setAttribute('cx', cx);
+                circle.setAttribute('cy', cy);
+                circle.setAttribute('r', '12');
+                circle.setAttribute('fill', 'gold');
+                circle.setAttribute('stroke', 'black');
+                circle.setAttribute('stroke-width', '2');
+                circle.addEventListener('click', () => {
+                    alert(`Clicked: ${obj.properties.name}\n${obj.properties.desc || obj.properties.dialog || ''}`);
+                });
+                svg.appendChild(circle);
+            }
+            // Add future types here (e.g. image icons, NPCs, collectibles)
+        });
+
+        // Show/hide back button based on history
+        backButton.style.display = (history.length > 0) ? 'block' : 'none';
+    }
+
+    function goBack() {
+        if (history.length > 0) {
+            isGoingBack = true;  // Prevent history push during backward render
+            const previousLevel = history.pop();
+            renderMap(previousLevel);
+        }
+    }
+
+    backButton.addEventListener('click', goBack);
+
+    // Load data when the page is ready
+    window.addEventListener('DOMContentLoaded', loadMapData);
+</script>
 </body>
 </html>
