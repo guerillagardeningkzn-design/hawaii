@@ -79,67 +79,110 @@
     </div>
 
     <script>
-        // Maps array – add more levels easily later
-        const maps = [
-            {
-                url: 'images/island_map.jpg',
-                regions: [
-                    // Example poly for southern area → Gulf Coast level
-                    { points: '80,520 520,520 520,760 320,800 80,720', nextLevel: 1 }
-                ]
-            },
-            {
-                url: 'images/gulf_coast.jpg',
-                regions: [
-                    // Example poly around Port Haven
-                    { points: '180,420 420,420 420,620 320,670 180,620', nextLevel: 2 }
-                ]
-            },
-            {
-                url: 'images/port_haven.jpg',
-                regions: [] // Terminal level – add regions if you make deeper zooms
-            }
-        ];
+    let maps = [];  // Populated dynamically from Google Sheets via Apps Script
+    let currentLevel = 0;
+    const svg = document.getElementById('map-svg');
+    const backButton = document.getElementById('back-button');
 
-        let currentLevel = 0;
-        const svg = document.getElementById('map-svg');
-        const backButton = document.getElementById('back-button');
+    // ←←← REPLACE THIS WITH YOUR ACTUAL APPS SCRIPT WEB APP URL ←←←
+    const apiUrl = 'https://script.google.com/macros/s/AKfycbygjXQ023r358utfU_3UhVQDDN3vOWnahjY_Gs6mpubRbs5l-oZECpy7pt0lUPWpvLK/exec;
 
-        function renderMap(level) {
-            currentLevel = level;
-            const mapData = maps[level];
-            svg.innerHTML = '';
-
-            // Background image
-            const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-            img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', mapData.url);
-            img.setAttribute('x', '0');
-            img.setAttribute('y', '0');
-            img.setAttribute('width', '600');
-            img.setAttribute('height', '800');
-            svg.appendChild(img);
-
-            // Clickable regions
-            mapData.regions.forEach(r => {
-                const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-                poly.setAttribute('points', r.points);
-                poly.addEventListener('click', () => {
-                    if (r.nextLevel < maps.length) renderMap(r.nextLevel);
-                });
-                svg.appendChild(poly);
+    async function loadMapData() {
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'GET',
+                mode: 'cors',
+                cache: 'no-cache',  // Ensures you get fresh data after Sheet edits
+                redirect: 'follow'
             });
 
-            backButton.style.display = level > 0 ? 'block' : 'none';
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+
+            maps = await response.json();
+
+            if (!Array.isArray(maps) || maps.length === 0) {
+                throw new Error('Invalid map data format');
+            }
+
+            renderMap(0);  // Start with level 0 after successful load
+        } catch (error) {
+            console.error('Failed to load map data from Google Sheets:', error);
+
+            // Fallback: hardcoded original data (safe backup)
+            maps = [
+                {
+                    url: 'images/island_map.jpg',
+                    regions: [
+                        { points: '80,520 520,520 520,760 320,800 80,720', nextLevel: 1 }
+                        // Add more regions here if needed for fallback
+                    ]
+                },
+                {
+                    url: 'images/gulf_coast.jpg',
+                    regions: [
+                        { points: '180,420 420,420 420,620 320,670 180,620', nextLevel: 2 }
+                    ]
+                },
+                {
+                    url: 'images/port_haven.jpg',
+                    regions: []
+                }
+            ];
+
+            renderMap(0);
+            alert('Using fallback map data (check console for details)');
+        }
+    }
+
+    function renderMap(level) {
+        currentLevel = level;
+        const mapData = maps[level];
+
+        if (!mapData) {
+            console.error('No map data for level', level);
+            return;
         }
 
-        function goBack() {
-            if (currentLevel > 0) renderMap(currentLevel - 1);
+        svg.innerHTML = '';
+
+        // Background image
+        const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+        img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', mapData.url);
+        img.setAttribute('x', '0');
+        img.setAttribute('y', '0');
+        img.setAttribute('width', '600');
+        img.setAttribute('height', '800');
+        svg.appendChild(img);
+
+        // Clickable polygon regions
+        (mapData.regions || []).forEach(region => {
+            const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            poly.setAttribute('points', region.points);
+            poly.addEventListener('click', () => {
+                if (typeof region.nextLevel === 'number' && region.nextLevel < maps.length) {
+                    renderMap(region.nextLevel);
+                }
+            });
+            svg.appendChild(poly);
+        });
+
+        // Show/hide back button
+        backButton.style.display = (level > 0) ? 'block' : 'none';
+    }
+
+    function goBack() {
+        if (currentLevel > 0) {
+            renderMap(currentLevel - 1);
         }
+    }
 
-        backButton.addEventListener('click', goBack);
+    // Wire up the back button
+    backButton.addEventListener('click', goBack);
 
-        // Start with level 0
-        renderMap(0);
-    </script>
+    // Load data when page is ready
+    window.addEventListener('DOMContentLoaded', loadMapData);
+</script>
 </body>
 </html>
