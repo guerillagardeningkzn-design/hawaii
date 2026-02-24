@@ -136,37 +136,60 @@
     }
 
     function renderMap(level) {
-        currentLevel = level;
-        const mapData = maps[level];
+    currentLevel = level;
+    const mapData = maps[level];
 
-        if (!mapData) {
-            console.error('No map data for level', level);
-            return;
-        }
-
-        svg.innerHTML = '';
-
-        const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-        img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', mapData.url);
-        img.setAttribute('x', '0');
-        img.setAttribute('y', '0');
-        img.setAttribute('width', '600');
-        img.setAttribute('height', '800');
-        svg.appendChild(img);
-
-        (mapData.regions || []).forEach(region => {
-            const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-            poly.setAttribute('points', region.points);
-            poly.addEventListener('click', () => {
-                if (typeof region.nextLevel === 'number' && region.nextLevel < maps.length) {
-                    renderMap(region.nextLevel);
-                }
-            });
-            svg.appendChild(poly);
-        });
-
-        backButton.style.display = (level > 0) ? 'block' : 'none';
+    if (!mapData) {
+        console.error('No map data for level', level);
+        return;
     }
+
+    svg.innerHTML = '';
+
+    // Background image
+    const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+    img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', mapData.url);
+    img.setAttribute('x', '0');
+    img.setAttribute('y', '0');
+    img.setAttribute('width', '600');
+    img.setAttribute('height', '800');
+    svg.appendChild(img);
+
+    // Clickable polygon regions (zoom areas)
+    (mapData.regions || []).forEach(region => {
+        const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        poly.setAttribute('points', region.points);
+        poly.addEventListener('click', () => {
+            if (typeof region.nextLevel === 'number' && region.nextLevel < maps.length) {
+                renderMap(region.nextLevel);
+            }
+        });
+        svg.appendChild(poly);
+    });
+
+    // New: Interactive objects / markers
+    (mapData.objects || []).forEach(obj => {
+        if (obj.type === 'marker') {
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            const [cx, cy] = obj.points.split(',').map(Number);
+            circle.setAttribute('cx', cx);
+            circle.setAttribute('cy', cy);
+            circle.setAttribute('r', '12');
+            circle.setAttribute('fill', 'gold');
+            circle.setAttribute('stroke', 'black');
+            circle.setAttribute('stroke-width', '2');
+            circle.addEventListener('click', () => {
+                alert(`Clicked: ${obj.properties.name}\n${obj.properties.desc || ''}`);
+                // Later: open modal, play sound, update game state, etc.
+            });
+            svg.appendChild(circle);
+        }
+        // Add cases for other types here as needed
+    });
+
+    // Show/hide back button
+    backButton.style.display = (level > 0) ? 'block' : 'none';
+}
 
     function goBack() {
         if (currentLevel > 0) {
