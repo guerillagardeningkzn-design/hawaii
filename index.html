@@ -194,22 +194,43 @@
 
         // Interactive objects / markers
         (mapData.objects || []).forEach(obj => {
-            if (obj.type === 'marker') {
-                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                const [cx, cy] = obj.points.split(',').map(Number);
-                circle.setAttribute('cx', cx);
-                circle.setAttribute('cy', cy);
-                circle.setAttribute('r', '12');
-                circle.setAttribute('fill', 'gold');
-                circle.setAttribute('stroke', 'black');
-                circle.setAttribute('stroke-width', '2');
-                circle.addEventListener('click', () => {
-                    alert(`Clicked: ${obj.properties.name}\n${obj.properties.desc || obj.properties.dialog || ''}`);
-                });
-                svg.appendChild(circle);
-            }
-            // Add future types here (e.g. image icons, NPCs, collectibles)
-        });
+  if (obj.type === 'marker') {
+    // Safety check: skip if points is missing or not a valid string
+    if (typeof obj.points !== 'string' || !obj.points.includes(',')) {
+      console.warn('Skipping invalid marker – missing or bad points:', obj);
+      return;
+    }
+
+    const parts = obj.points.split(',');
+    if (parts.length !== 2) {
+      console.warn('Skipping marker – invalid points format:', obj.points);
+      return;
+    }
+
+    const cx = parseFloat(parts[0]);
+    const cy = parseFloat(parts[1]);
+
+    if (isNaN(cx) || isNaN(cy)) {
+      console.warn('Skipping marker – invalid coordinates:', obj.points);
+      return;
+    }
+
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', cx);
+    circle.setAttribute('cy', cy);
+    circle.setAttribute('r', '12');
+    circle.setAttribute('fill', 'gold');
+    circle.setAttribute('stroke', 'black');
+    circle.setAttribute('stroke-width', '2');
+
+    circle.addEventListener('click', () => {
+      alert(`Clicked: ${obj.properties?.name || 'Marker'}\n${obj.properties?.desc || obj.properties?.dialog || ''}`);
+    });
+
+    svg.appendChild(circle);
+  }
+  // Add future types here...
+});
 
         // Show/hide back button based on history
         backButton.style.display = (history.length > 0) ? 'block' : 'none';
